@@ -18,6 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 xdg-utils \
         libasound2 libpango-1.0-0 libcairo2 libxss1 libxtst6 \
         libvulkan1 wget \
+        # FFmpeg (Twitch streaming with VA-API hw encoding)
+        ffmpeg \
         # Intel GPU / VA-API
         intel-media-va-driver vainfo \
         # Utilities

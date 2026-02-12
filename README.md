@@ -94,6 +94,52 @@ Auto-detects the install type. Chrome profile (`~/.config/quest-cast-chrome`) is
 
 ---
 
+## 📺 Twitch Streaming
+
+Stream your Quest cast directly to Twitch with hardware-accelerated encoding (Intel VA-API).
+
+### Getting Your Stream Key
+
+1. Go to [dashboard.twitch.tv/settings/stream](https://dashboard.twitch.tv/settings/stream)
+2. Click **Copy** next to your Primary Stream Key
+3. Keep this secret — anyone with the key can stream to your channel
+
+### Docker
+
+Add your stream key to `docker-compose.yml` under the `environment` section:
+
+```yaml
+    environment:
+      - RESOLUTION=1920x1080x24
+      - TWITCH_STREAM_KEY=live_xxxxxxxxxxxx   # ← your key here
+      - TWITCH_AUTOSTART=true                 # ← set to true to stream on startup
+```
+
+Then rebuild:
+
+```bash
+docker compose up -d --build
+```
+
+Or start/stop the stream on-demand without editing the file:
+
+```bash
+docker exec quest-cast supervisorctl start twitch-stream    # ▶️  go live
+docker exec quest-cast supervisorctl stop twitch-stream     # ⏹️  stop
+```
+
+### Local Install
+
+Edit `/etc/supervisor/conf.d/quest-cast.conf` and replace `CHANGE_ME` with your Twitch stream key, then:
+
+```bash
+sudo supervisorctl reread && sudo supervisorctl update
+sudo supervisorctl start twitch-stream    # ▶️  go live
+sudo supervisorctl stop twitch-stream     # ⏹️  stop
+```
+
+---
+
 ## ⚠️ Limitations
 
 - 🌐 Cast stream routes through **Meta's cloud servers** (requires internet, adds some latency)

@@ -11,6 +11,8 @@ services:
       - /dev/dri:/dev/dri
     environment:
       - RESOLUTION=1920x1080x24
+      - TWITCH_STREAM_KEY=${TWITCH_STREAM_KEY:-}
+      - TWITCH_AUTOSTART=${TWITCH_AUTOSTART:-false}
     shm_size: "2g"
 
 volumes:

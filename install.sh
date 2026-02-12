@@ -27,6 +27,7 @@ apt-get install -y --no-install-recommends \
     libasound2 libpango-1.0-0 libcairo2 libxss1 libxtst6 \
     libvulkan1 wget \
     intel-media-va-driver vainfo \
+    ffmpeg \
     supervisor
 
 # ── Google Chrome ────────────────────────────────────────────────
@@ -119,6 +120,23 @@ priority=50
 startsecs=3
 stdout_logfile=/var/log/quest-cast/novnc.log
 stderr_logfile=/var/log/quest-cast/novnc-err.log
+[program:twitch-stream]
+command=ffmpeg
+    -vaapi_device /dev/dri/renderD128
+    -f x11grab -video_size 1920x1080 -framerate 30 -i :99
+    -f pulse -i default
+    -vf format=nv12,hwupload
+    -c:v h264_vaapi -b:v 4500k -maxrate 6000k -bufsize 12000k -g 60
+    -c:a aac -b:a 128k -ar 44100
+    -f flv rtmp://live.twitch.tv/app/CHANGE_ME
+autostart=false
+autorestart=true
+user=${SERVICE_USER}
+environment=DISPLAY=":99",HOME="/home/${SERVICE_USER}"
+priority=60
+startsecs=10
+stdout_logfile=/var/log/quest-cast/twitch.log
+stderr_logfile=/var/log/quest-cast/twitch-err.log
 SUPERVISOR
 
 mkdir -p /var/log/quest-cast
