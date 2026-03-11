@@ -83,6 +83,19 @@ View the stream from any device on your network at `http://<server-ip>:6080/vnc.
 
 ---
 
+## 🎛️ Manager Dashboard
+
+A lightweight web dashboard to **start and stop** the quest-cast container from your browser — saves RAM when casting isn't in use.
+
+- Open `http://<server-ip>:8081` from any device
+- Shows live container status with Start / Stop controls
+- Embeds the noVNC viewer when running (plus a Full Screen link)
+- Uses ~15 MB of RAM and stays running independently
+
+The manager is included automatically with `docker compose up -d --build`.
+
+---
+
 ## 🗑️ Uninstall
 
 ```bash
