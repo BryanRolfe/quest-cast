@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quest Cast</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0f;
+      color: #e0e0e0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: #12121a;
+      border-bottom: 1px solid #1e1e2e;
+      flex-shrink: 0;
+    }
+    h1 { font-size: 1.15em; font-weight: 600; }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82em;
+      color: #888;
+    }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #555;
+      flex-shrink: 0;
+    }
+    .dot.running   { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+    .dot.exited, .dot.dead, .dot.not\ found { background: #f87171; }
+    .dot.starting, .dot.restarting, .dot.created { background: #fbbf24; animation: pulse 1s infinite; }
+    @keyframes pulse { 50% { opacity: 0.4; } }
+
+    button, .link-btn {
+      padding: 5px 14px;
+      border: none;
+      border-radius: 5px;
+      font-size: 0.82em;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-start  { background: #7c3aed; color: #fff; }
+    .btn-start:hover { background: #6d28d9; }
+    .btn-stop   { background: #1e1e2e; color: #ccc; border: 1px solid #333; }
+    .btn-stop:hover { background: #2a2a3e; }
+    .link-btn   { color: #a78bfa; border: 1px solid #7c3aed; background: transparent; }
+    .link-btn:hover { background: rgba(124,58,237,0.12); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .placeholder {
+      text-align: center;
+      color: #555;
+    }
+    .placeholder .icon { font-size: 3.5em; margin-bottom: 14px; }
+    .placeholder p { font-size: 0.95em; margin-bottom: 18px; }
+    iframe {
+      width: 100%; height: 100%;
+      border: none;
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🥽 Quest Cast</h1>
+    <div class="controls">
+      <div class="status">
+        <span class="dot" id="dot"></span>
+        <span id="statusText">—</span>
+      </div>
+      <a id="openBtn" class="link-btn hidden" href="#" target="_blank">Full Screen</a>
+      <button id="toggleBtn" disabled>—</button>
+    </div>
+  </header>
+
+  <div class="main" id="main">
+    <div class="placeholder" id="placeholder">
+      <div class="icon">🥽</div>
+      <p id="placeholderMsg">Container is not running</p>
+      <button class="btn-start" id="placeholderBtn" onclick="toggle()">Start Quest Cast</button>
+    </div>
+    <iframe id="viewer" class="hidden"></iframe>
+  </div>
+
+  <script>
+    const NOVNC_PORT = 6080;
+    let status = '';
+    let poll = null;
+
+    function viewerUrl() {
+      return `http://${location.hostname}:${NOVNC_PORT}/vnc.html?autoconnect=true&resize=scale&reconnect=true&reconnect_delay=2000`;
+    }
+
+    async function fetchStatus() {
+      try {
+        const r = await fetch('/api/status');
+        updateUI((await r.json()).status);
+      } catch { updateUI('error'); }
+    }
+
+    function updateUI(s) {
+      status = s;
+      const dot       = document.getElementById('dot');
+      const text      = document.getElementById('statusText');
+      const btn       = document.getElementById('toggleBtn');
+      const openBtn   = document.getElementById('openBtn');
+      const viewer    = document.getElementById('viewer');
+      const ph        = document.getElementById('placeholder');
+      const phMsg     = document.getElementById('placeholderMsg');
+      const phBtn     = document.getElementById('placeholderBtn');
+
+      dot.className = 'dot ' + s;
+      text.textContent = s;
+      btn.disabled = false;
+
+      if (s === 'running') {
+        btn.textContent = 'Stop';
+        btn.className = 'btn-stop';
+        ph.classList.add('hidden');
+        viewer.classList.remove('hidden');
+        openBtn.href = viewerUrl();
+        openBtn.classList.remove('hidden');
+        if (!viewer.src.includes('vnc.html')) viewer.src = viewerUrl();
+      } else {
+        btn.textContent = 'Start';
+        btn.className = 'btn-start';
+        ph.classList.remove('hidden');
+        viewer.classList.add('hidden');
+        viewer.src = '';
+        openBtn.classList.add('hidden');
+        phBtn.disabled = false;
+
+        if (s === 'error')     phMsg.textContent = 'Could not reach Docker';
+        else if (s === 'not found') phMsg.textContent = 'Container not found — run docker compose up -d';
+        else                   phMsg.textContent = 'Container is not running';
+      }
+    }
+
+    async function toggle() {
+      document.getElementById('toggleBtn').disabled = true;
+      document.getElementById('placeholderBtn').disabled = true;
+      const action = status === 'running' ? 'stop' : 'start';
+      try {
+        const r = await fetch(`/api/${action}`, { method: 'POST' });
+        updateUI((await r.json()).status);
+      } catch {}
+      fastPoll();
+    }
+
+    function fastPoll() {
+      clearInterval(poll);
+      let n = 0;
+      poll = setInterval(async () => {
+        await fetchStatus();
+        if (++n > 10) normalPoll();
+      }, 1000);
+    }
+
+    function normalPoll() {
+      clearInterval(poll);
+      poll = setInterval(fetchStatus, 5000);
+    }
+
+    fetchStatus();
+    normalPoll();
+  </script>
+</body>
+</html>

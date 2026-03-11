@@ -13,5 +13,16 @@ services:
       - RESOLUTION=1920x1080x24
     shm_size: "2g"
 
+  manager:
+    build: ./manager
+    container_name: quest-cast-manager
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - MANAGED_CONTAINER=quest-cast
+
 volumes:
   chrome-profile:
